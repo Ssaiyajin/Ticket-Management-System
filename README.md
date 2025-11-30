@@ -4,7 +4,31 @@ A sample **Ticket Management** project demonstrating **inter-process communicati
 
 ---
 
-## Requirements
+## Project Structure
+
+```
+Ticket-Management-System/
+├── server/               # Server module
+│   ├── src/main/java/backend
+│   │   └── TicketServerMain.java
+│   └── build/           # Build output for server
+├── client/               # Client module
+│   ├── app/             # Main application code
+│   │   └── Main.java
+│   ├── ui/              # UI components
+│   └── test/            # Client tests
+├── shared/               # Shared code and protobufs
+│   ├── entities/        # Entity classes
+│   └── proto/           # Proto files
+│       └── TicketManagement.proto
+├── build.gradle
+├── settings.gradle
+└── README.md
+```
+
+---
+
+## Requirements 🛠
 
 * Java 11+
 * Git
@@ -13,7 +37,7 @@ A sample **Ticket Management** project demonstrating **inter-process communicati
 
 ---
 
-## Setup
+## Setup ⚡
 
 Clone the repository:
 
@@ -24,7 +48,7 @@ cd Ticket-Management-System
 
 ---
 
-## Build
+## Build 🏗
 
 **Unix / macOS:**
 
@@ -47,7 +71,7 @@ cd Ticket-Management-System
 
 ---
 
-## Run
+## Run ▶️
 
 **Server (from classes):**
 
@@ -66,7 +90,7 @@ java -cp "server/build/libs/*" backend.TicketServerMain
 
 ---
 
-## Testing
+## Testing ✅
 
 ```bash
 ./gradlew test        # Unix / macOS
@@ -75,7 +99,7 @@ java -cp "server/build/libs/*" backend.TicketServerMain
 
 ---
 
-## Shutdown
+## Shutdown 🛑
 
 * Server runs until terminated.
 * Stop with `Ctrl+C` or IDE stop button.
@@ -83,7 +107,7 @@ java -cp "server/build/libs/*" backend.TicketServerMain
 
 ---
 
-## Git Notes
+## Git Notes 📝
 
 * Stop tracking generated files already in Git:
 
@@ -102,7 +126,7 @@ shared/bin/
 
 ---
 
-## Troubleshooting
+## Troubleshooting ⚠️
 
 * Ensure firewall allows UDP ports.
 * RabbitMQ instance must be running and reachable.
@@ -110,7 +134,7 @@ shared/bin/
 
 ---
 
-## Contributing
+## Contributing 🤝
 
 * Fork, branch, implement changes, add tests, open PR.
 * Keep commits small and descriptive.
