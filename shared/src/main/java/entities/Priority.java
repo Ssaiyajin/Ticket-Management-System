@@ -3,60 +3,62 @@ package entities;
 import java.io.Serializable;
 
 /**
- * Enumeration to describe the Priority of a {@link Ticket}.
- *
- * Aligned with protobuf (rpc.ticketmanagement.TicketManagementProto.Priority).
- *
- * Values:
- * - UNKNOWN (maps to PRIORITY_UNKNOWN)
- * - LOW
- * - MEDIUM
- * - HIGH
- *
- * Backwards-compatible aliases (deprecated) for older naming.
+ * Enumeration to describe the Priority of a {@link Ticket} or
+ * {@link TransferTicket}.
+ * 
+ * Possible Values:
+ * <ul>
+ * <li>{@code CRITICAL}</li>
+ * <li>{@code MAJOR}</li>
+ * <li>{@code MINOR}</li>
+ * </ul>
+ * 
  */
 public enum Priority implements Serializable {
-    UNKNOWN,
-    LOW,
-    MEDIUM,
-    HIGH;
+    CRITICAL, MAJOR, MINOR;
 
     private static final long serialVersionUID = 1L;
 
     /**
-     * Backwards-compatible aliases for older code that used CRITICAL/MAJOR/MINOR.
-     * Prefer the canonical names LOW/MEDIUM/HIGH.
+     * Case-insensitive parse. Returns null for null/unknown input.
      */
-    @Deprecated public static final Priority CRITICAL = HIGH;
-    @Deprecated public static final Priority MAJOR    = MEDIUM;
-    @Deprecated public static final Priority MINOR    = LOW;
-
-    public static Priority fromProto(rpc.ticketmanagement.TicketManagementProto.Priority proto) {
-        if (proto == null) return UNKNOWN;
-        switch (proto) {
-            case LOW:
-                return LOW;
-            case MEDIUM:
-                return MEDIUM;
-            case HIGH:
-                return HIGH;
-            case PRIORITY_UNKNOWN:
-            default:
-                return UNKNOWN;
+    public static Priority fromString(String s) {
+        if (s == null) return null;
+        try {
+            return Priority.valueOf(s.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 
-    public rpc.ticketmanagement.TicketManagementProto.Priority toProto() {
-        switch (this) {
-            case LOW:
-                return rpc.ticketmanagement.TicketManagementProto.Priority.LOW;
-            case MEDIUM:
-                return rpc.ticketmanagement.TicketManagementProto.Priority.MEDIUM;
-            case HIGH:
-                return rpc.ticketmanagement.TicketManagementProto.Priority.HIGH;
-            case UNKNOWN:
-            default:
-                return rpc.ticketmanagement.TicketManagementProto.Priority.PRIORITY_UNKNOWN;
+    /**
+     * Convert from a protobuf-generated enum (or any Enum) by name.
+     * Safe when you don't want a compile-time dependency on the generated type.
+     */
+    public static Priority fromProtoEnum(Enum<?> protoEnum) {
+        if (protoEnum == null) return null;
+        try {
+            return Priority.valueOf(protoEnum.name());
+        } catch (IllegalArgumentException e) {
+            return null;
         }
+    }
+
+    /**
+     * Convert this enum to a target enum class (e.g. the generated proto enum).
+     * Returns null if protoEnumClass is null or doesn't contain a matching constant.
+     */
+    public <E extends Enum<E>> E toProtoEnum(Class<E> protoEnumClass) {
+        if (protoEnumClass == null) return null;
+        try {
+            return Enum.valueOf(protoEnumClass, this.name());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return name();
     }
 }

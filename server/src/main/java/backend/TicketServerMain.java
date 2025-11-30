@@ -1,8 +1,5 @@
 package backend;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,13 +25,9 @@ public class TicketServerMain {
             }
         }
 
-        try (BufferedReader shutdownReader = new BufferedReader(new InputStreamReader(System.in))) {
-            System.out.println("Press enter to shutdown system.");
-            shutdownReader.readLine();
-            System.out.println("Shutting down...");
-        } catch (IOException e) {
-            System.out.println("Error while waiting for shutdown input: " + e.getMessage());
-        } finally {
+        // Use a shutdown hook instead of waiting for stdin so the server keeps running
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutdown initiated...");
             // notify implementations to stop
             for (RemoteAccess implementation : remoteAccessImplementations) {
                 try {
@@ -57,9 +50,17 @@ public class TicketServerMain {
                     Thread.currentThread().interrupt();
                 }
             }
+            System.out.println("Shutdown hook completed.");
+        }));
 
-            System.out.println("Completed. Bye!");
+        System.out.println("Server running. Press Ctrl+C to shutdown.");
+        try {
+            Thread.sleep(Long.MAX_VALUE);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
+
+        System.out.println("Completed. Bye!");
     }
 
     private static List<RemoteAccess> getAvailableRemoteAccessImplementations(String[] args) {

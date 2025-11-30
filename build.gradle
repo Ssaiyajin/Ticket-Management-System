@@ -1,145 +1,164 @@
 buildscript {
-    repositories { mavenCentral() }
+    repositories {
+        mavenCentral()
+    }
     dependencies {
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
+        classpath "com.google.protobuf:protobuf-gradle-plugin:0.9.4"
     }
 }
 
-allprojects {
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+group = 'com.example'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+// -------------------- Global Subproject Configuration --------------------
+subprojects {
     apply plugin: 'java'
-    version = '1.0'
-    sourceCompatibility = '1.8'
+    apply plugin: 'com.google.protobuf'
 
     repositories {
         mavenCentral()
     }
 
-    // common libs used across subprojects
-    dependencies {
-        // gRPC / Protobuf
-        compile 'io.grpc:grpc-netty-shaded:1.20.0'
-        compile 'io.grpc:grpc-protobuf:1.20.0'
-        compile 'io.grpc:grpc-stub:1.20.0'
-        compile "com.google.protobuf:protobuf-java-util:3.7.1"
-
-        // JMS (if still required)
-        compile 'org.glassfish.mq:imq:5.1'
-        compile 'com.sun.messaging.mq:fscontext:4.+'
-
-        testCompile group: 'junit', name: 'junit', version: '4.12'
+    java {
+        // Set to JDK version you are using (e.g., 17 or 21)
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
     }
-}
 
-// Configure shared subproject to generate protobuf sources into shared/src/generated
-project(':shared') {
-    apply plugin: 'java'
-    apply plugin: 'com.google.protobuf'
+    dependencies {
+        testImplementation 'junit:junit:4.13.2'
+    }
 
     sourceSets {
         main {
             java {
-                srcDir 'src/main/java'
-                srcDir 'src/generated/main/java'
-                // grpc generated classes are Java as well (placed under src/generated/main/java)
+                srcDirs 'src/main/java',
+                        "${buildDir}/generated/source/proto/main/java",
+                        "${buildDir}/generated/source/proto/main/grpc"
             }
         }
+    }
+
+    // Suppress obsolete source/target warnings
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += [
+            '--add-exports', 'java.base/jdk.internal.module=ALL-UNNAMED'
+        ]
+        options.encoding = 'UTF-8'
+    }
+
+    // Disable proto generation by default for other projects
+    tasks.withType(com.google.protobuf.gradle.GenerateProtoTask) {
+        enabled = false
+    }
+}
+
+// -------------------- Shared Project --------------------
+project(':shared') {
+
+    dependencies {
+        implementation 'com.google.protobuf:protobuf-java:3.25.3'
+        implementation 'io.grpc:grpc-netty-shaded:1.64.0'
+        implementation 'io.grpc:grpc-protobuf:1.64.0'
+        implementation 'io.grpc:grpc-stub:1.64.0'
+        implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1' // Fix for @Generated
     }
 
     protobuf {
         protoc {
-            artifact = "com.google.protobuf:protoc:3.7.1"
+            artifact = "com.google.protobuf:protoc:3.25.3:windows-x86_64@exe"
         }
         plugins {
             grpc {
-                artifact = 'io.grpc:protoc-gen-grpc-java:1.20.0'
+                artifact = "io.grpc:protoc-gen-grpc-java:1.64.0:windows-x86_64@exe"
             }
         }
         generateProtoTasks {
-            all()*.plugins {
-                grpc {}
+            all().each { task ->
+                task.builtins {
+                    java {
+                        option 'annotate_code' // Generates @javax.annotation.Generated
+                    }
+                }
+                task.plugins {
+                    grpc {}
+                }
             }
         }
-        // generate under the shared module folder
-        generatedFilesBaseDir = "$projectDir/src/generated"
     }
-
-    // ensure generated sources are compiled
-    compileJava.dependsOn 'generateProto'
-    dependencies {
-        compile "com.google.protobuf:protobuf-java-util:3.7.1"
-        compile 'io.grpc:grpc-protobuf:1.20.0'
-        compile 'io.grpc:grpc-stub:1.20.0'
-    }
-}
-
-// client project
-project(':client') {
-    apply plugin: 'application'
-
-    application {
-        mainClassName = 'app.Main'
-    }
-
-    jar {
-        manifest {
-            attributes('Main-Class': 'app.Main')
-        }
-    }
-
-    // generated dir used by client (kept as original behavior)
-    project.ext.defaultgenerateddir = file('src/generated/java')
-    project.ext.defaultgenerateddir.mkdirs()
 
     sourceSets {
         main {
+            proto {
+                srcDir 'src/main/proto' // Proto files location
+            }
             java {
-                srcDir 'src/main/java'
-                srcDir project.ext.defaultgenerateddir
+                srcDirs 'src/main/java',
+                        "${buildDir}/generated/source/proto/main/java",
+                        "${buildDir}/generated/source/proto/main/grpc"
             }
         }
     }
 
-    configurations {
-        wstools
+    // Enable proto generation for shared
+    tasks.withType(com.google.protobuf.gradle.GenerateProtoTask) {
+        enabled = true
     }
 
-    dependencies {
-        compile project(':shared')
-        wstools group: 'com.sun.xml.ws', name: 'jaxws-tools', version: '2.3.2'
-    }
+    // Replace javax.annotation.Generated with jakarta.annotation.Generated after proto generation
+    tasks.withType(JavaCompile).configureEach {
+        doFirst {
+            def protoJavaDir = file("${buildDir}/generated/source/proto/main/java")
+            def protoGrpcDir = file("${buildDir}/generated/source/proto/main/grpc")
 
-    task wsimport(group: "WS tools", description: "execute wsimport task with a given wsdl location") {
-        doLast {
-            if (!project.hasProperty('wsdl')) {
-                throw new GradleException('No wsdl location provided, please provide a wsdl location such as: -Pwsdl="http://localhost:8080/MyService?wsdl"')
-            } else {
-                ant.taskdef(name: 'wsimport', classname: 'com.sun.tools.ws.ant.WsImport', classpath: configurations.wstools.asPath)
-                ant.wsimport(wsdl: wsdl,
-                        sourcedestdir: project.ext.defaultgenerateddir,
-                        xnocompile: true,
-                        verbose: true)
+            [protoJavaDir, protoGrpcDir].each { dir ->
+                fileTree(dir).matching { include '**/*.java' }.forEach { f ->
+                    def text = f.text.replaceAll('@javax\\.annotation\\.Generated', '@jakarta.annotation.Generated')
+                    f.text = text
+                }
             }
         }
+    }
+
+    // Handle duplicate proto files gracefully
+    tasks.withType(ProcessResources) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
 }
 
-// server project
+// -------------------- Server Project --------------------
 project(':server') {
     apply plugin: 'application'
+    dependencies {
+        implementation project(':shared')
+        implementation 'com.google.code.gson:gson:2.10.1' // <- Add this
+    }
 
     application {
-        mainClassName = 'backend.TicketServerMain'
-    }
-
-    jar {
-        manifest {
-            attributes('Main-Class': 'backend.TicketServerMain')
-        }
-    }
-
-    dependencies {
-        compile project(':shared')
+        mainClass = "backend.TicketServerMain"
     }
 }
 
-apply plugin: 'eclipse'
+// -------------------- Client Project --------------------
+project(':client') {
+    apply plugin: 'application'
+    dependencies {
+        implementation project(':shared')
+        implementation 'com.google.code.gson:gson:2.10.1'
+    }
+
+    application {
+        mainClass = "app.Main"
+    }
+}

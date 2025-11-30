@@ -3,70 +3,82 @@ package entities;
 import java.io.Serializable;
 
 /**
- * Enumeration to describe the Status of a {@link Ticket} or {@link TransferTicket}.
+ * Enumeration to describe the Status of a {@link Ticket} or
+ * {@link TransferTicket}.
  *
- * This enum is aligned with the protobuf definition (rpc.ticketmanagement.TicketManagementProto.Status).
- *
- * Values:
- * - UNKNOWN (maps to STATUS_UNKNOWN)
- * - OPEN
- * - IN_PROGRESS
- * - RESOLVED
- * - CLOSED
- *
- * Compatibility: some existing code used Status.NEW; a deprecated alias NEW is provided and maps to OPEN.
+ * Possible Values:
+ * <ul>
+ * <li>{@code NEW}</li>
+ * <li>{@code OPEN} (alias / semantic equivalent of NEW)</li>
+ * <li>{@code ACCEPTED}</li>
+ * <li>{@code IN_PROGRESS}</li>
+ * <li>{@code RESOLVED}</li>
+ * <li>{@code REJECTED}</li>
+ * <li>{@code CLOSED}</li>
+ * </ul>
  */
 public enum Status implements Serializable {
-    UNKNOWN,
-    OPEN,
+    NEW,
+    OPEN,           // kept for UI/backwards-compatibility checks
+    ACCEPTED,
     IN_PROGRESS,
     RESOLVED,
+    REJECTED,
     CLOSED;
 
     private static final long serialVersionUID = 1L;
 
     /**
-     * Backwards-compatible alias used by older code. Prefer {@link #OPEN}.
+     * Case-insensitive parse. Returns null for null/unknown input.
+     * Accepts old/new names like "open" and "new".
      */
-    @Deprecated
-    public static final Status NEW = OPEN;
-
-    /**
-     * Convert from protobuf enum to this enum.
-     */
-    public static Status fromProto(rpc.ticketmanagement.TicketManagementProto.Status proto) {
-        if (proto == null) return UNKNOWN;
-        switch (proto) {
-            case OPEN:
-                return OPEN;
-            case IN_PROGRESS:
-                return IN_PROGRESS;
-            case RESOLVED:
-                return RESOLVED;
-            case CLOSED:
-                return CLOSED;
-            case STATUS_UNKNOWN:
-            default:
-                return UNKNOWN;
+    public static Status fromString(String s) {
+        if (s == null) return null;
+        String key = s.trim().toUpperCase();
+        // Accept "OPEN" as its own constant; historically NEW was used as alias.
+        try {
+            return Status.valueOf(key);
+        } catch (IllegalArgumentException e) {
+            // Unknown token
+            return null;
         }
     }
 
     /**
-     * Convert this enum to the protobuf enum.
+     * Convert from a protobuf-generated enum (or any Enum) by name.
+     * Safe when you don't want a compile-time dependency on the generated type.
      */
-    public rpc.ticketmanagement.TicketManagementProto.Status toProto() {
-        switch (this) {
-            case OPEN:
-                return rpc.ticketmanagement.TicketManagementProto.Status.OPEN;
-            case IN_PROGRESS:
-                return rpc.ticketmanagement.TicketManagementProto.Status.IN_PROGRESS;
-            case RESOLVED:
-                return rpc.ticketmanagement.TicketManagementProto.Status.RESOLVED;
-            case CLOSED:
-                return rpc.ticketmanagement.TicketManagementProto.Status.CLOSED;
-            case UNKNOWN:
-            default:
-                return rpc.ticketmanagement.TicketManagementProto.Status.STATUS_UNKNOWN;
+    public static Status fromProtoEnum(Enum<?> protoEnum) {
+        if (protoEnum == null) return null;
+        try {
+            return Status.valueOf(protoEnum.name());
+        } catch (IllegalArgumentException e) {
+            return null;
         }
+    }
+
+    /**
+     * Convert this enum to a target enum class (e.g. the generated proto enum).
+     * Returns null if protoEnumClass is null or doesn't contain a matching constant.
+     */
+    public <E extends Enum<E>> E toProtoEnum(Class<E> protoEnumClass) {
+        if (protoEnumClass == null) return null;
+        try {
+            return Enum.valueOf(protoEnumClass, this.name());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Whether this status is terminal (no further state transitions expected).
+     */
+    public boolean isTerminal() {
+        return this == CLOSED || this == REJECTED;
+    }
+
+    @Override
+    public String toString() {
+        return name();
     }
 }

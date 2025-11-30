@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Ticket representation used across server/client/shared code.
+ * Ticket representation.
  */
 public class Ticket implements Serializable, Cloneable {
 
@@ -19,15 +19,14 @@ public class Ticket implements Serializable, Cloneable {
     private Status status;
 
     public Ticket() {
-        this.status = Status.NEW;
+        this(0, null, null, null, null, null, Status.NEW);
     }
 
     public Ticket(int id, String reporter, String topic, String description, Type type, Priority priority) {
         this(id, reporter, topic, description, type, priority, Status.NEW);
     }
 
-    public Ticket(int id, String reporter, String topic, String description, Type type, Priority priority,
-                  Status status) {
+    public Ticket(int id, String reporter, String topic, String description, Type type, Priority priority, Status status) {
         this.id = id;
         this.reporter = reporter;
         this.topic = topic;
@@ -35,6 +34,18 @@ public class Ticket implements Serializable, Cloneable {
         this.type = type;
         this.priority = priority;
         this.status = status == null ? Status.NEW : status;
+    }
+
+    /** Copy constructor */
+    public Ticket(Ticket other) {
+        Objects.requireNonNull(other, "other ticket must not be null");
+        this.id = other.id;
+        this.reporter = other.reporter;
+        this.topic = other.topic;
+        this.description = other.description;
+        this.type = other.type;
+        this.priority = other.priority;
+        this.status = other.status;
     }
 
     public int getId() {
@@ -90,41 +101,39 @@ public class Ticket implements Serializable, Cloneable {
     }
 
     public void setStatus(Status status) {
-        this.status = status == null ? Status.NEW : status;
+        this.status = status;
     }
 
     @Override
     public String toString() {
-        return "Ticket #" + id + ": " + topic + " (reported by: " + reporter + ")\n" +
-               "Status: " + status + "\t Type: " + type + "\t Priority: " + priority + "\n" +
-               "Description:\n" + description;
+        return new StringBuilder()
+                .append("Ticket #").append(id)
+                .append(": ").append(topic)
+                .append(" (reported by: ").append(reporter).append(")\n")
+                .append("Status: ").append(status)
+                .append("\t Type: ").append(type)
+                .append("\t Priority: ").append(priority)
+                .append("\nDescription:\n").append(description)
+                .toString();
     }
 
     @Override
     public Ticket clone() {
-        try {
-            Ticket cloned = (Ticket) super.clone();
-            // Strings and enums are immutable; shallow copy is sufficient
-            return cloned;
-        } catch (CloneNotSupportedException e) {
-            // should not happen since we implement Cloneable
-            throw new AssertionError(e);
-        }
+        return new Ticket(this);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
+        if (!(o instanceof Ticket)) return false;
         Ticket ticket = (Ticket) o;
         return id == ticket.id &&
-               Objects.equals(reporter, ticket.reporter) &&
-               Objects.equals(topic, ticket.topic) &&
-               Objects.equals(description, ticket.description) &&
-               type == ticket.type &&
-               priority == ticket.priority &&
-               status == ticket.status;
+                Objects.equals(reporter, ticket.reporter) &&
+                Objects.equals(topic, ticket.topic) &&
+                Objects.equals(description, ticket.description) &&
+                type == ticket.type &&
+                priority == ticket.priority &&
+                status == ticket.status;
     }
 
     @Override

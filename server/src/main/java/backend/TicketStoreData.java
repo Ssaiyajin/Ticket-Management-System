@@ -83,7 +83,7 @@ public class TicketStoreData implements TicketStore {
     public Ticket createTicketFromChunk(RawData rawDataObject) {
         if (rawDataObject == null) return null;
         String key = makeChunkKey(rawDataObject);
-        int totalChunks = rawDataObject.getTotalChunk();
+        int totalChunks = rawDataObject.getTotalChunks();
         int chunkNo = rawDataObject.getChunkNo();
 
         if (totalChunks <= 0 || chunkNo <= 0 || chunkNo > totalChunks) {
@@ -117,7 +117,10 @@ public class TicketStoreData implements TicketStore {
                         // incomplete, shouldn't happen because of ifFull guard
                         return null;
                     }
-                    baos.write(part.getDataBytes());
+                    String d = part.getData();
+                    if (d != null) {
+                        baos.write(d.getBytes(StandardCharsets.UTF_8));
+                    }
                 }
                 byte[] fullBytes = baos.toByteArray();
                 String fullJson = new String(fullBytes, StandardCharsets.UTF_8);
@@ -164,7 +167,7 @@ public class TicketStoreData implements TicketStore {
     }
 
     public boolean isFullTicket(RawData rawDataObject) {
-        return rawDataObject != null && rawDataObject.getChunkNo() == 1 && rawDataObject.getTotalChunk() == 1;
+        return rawDataObject != null && rawDataObject.getChunkNo() == 1 && rawDataObject.getTotalChunks() == 1;
     }
 
     public boolean isUpdateRequest(RawData rawDataObject) {

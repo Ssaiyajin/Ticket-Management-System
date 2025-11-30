@@ -39,8 +39,10 @@ public class Main_Test {
                 try {
                     Method m2 = conn.getClass().getMethod("sendData", String.class);
                     m2.invoke(conn, payload);
-                } catch (NoSuchMethodException | ReflectiveOperationException ex) {
-                    System.err.println("sendData method not found or failed: " + ex.getMessage());
+                } catch (NoSuchMethodException nsme2) {
+                    System.err.println("No suitable sendData method found: " + nsme2.getMessage());
+                } catch (ReflectiveOperationException ex) {
+                    System.err.println("Reflective operation failed when invoking sendData(String): " + ex.getMessage());
                 }
             } catch (ReflectiveOperationException roe) {
                 System.err.println("Failed to invoke sendData: " + roe.getMessage());

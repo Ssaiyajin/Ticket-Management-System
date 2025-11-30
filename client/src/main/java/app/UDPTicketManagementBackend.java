@@ -1,6 +1,5 @@
 package app;
 
-import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.List;
 
@@ -11,7 +10,7 @@ import com.google.gson.reflect.TypeToken;
 import entities.Priority;
 import entities.Ticket;
 import entities.TicketException;
-import entities.Type as EType;
+import entities.Type;
 
 /**
  * UDP-backed implementation of TicketManagementBackend.
@@ -68,7 +67,7 @@ public class UDPTicketManagementBackend implements TicketManagementBackend {
     }
 
     @Override
-    public Ticket createNewTicket(String reporter, String topic, String description, EType type,
+    public Ticket createNewTicket(String reporter, String topic, String description, Type type,
             Priority priority) throws TicketException {
         if (reporter == null) reporter = "unknown";
         if (topic == null) topic = "";
@@ -102,7 +101,7 @@ public class UDPTicketManagementBackend implements TicketManagementBackend {
         }
         if (resp == null || resp.isEmpty()) return Collections.emptyList();
         try {
-            Type listType = new TypeToken<List<Ticket>>() {}.getType();
+            java.lang.reflect.Type listType = new TypeToken<List<Ticket>>() {}.getType();
             return gson.fromJson(resp, listType);
         } catch (JsonSyntaxException jse) {
             throw new TicketException("Malformed response for list request", jse);
