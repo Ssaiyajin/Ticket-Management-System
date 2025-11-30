@@ -1,0 +1,145 @@
+buildscript {
+    repositories { mavenCentral() }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.8'
+    }
+}
+
+allprojects {
+    apply plugin: 'java'
+    version = '1.0'
+    sourceCompatibility = '1.8'
+
+    repositories {
+        mavenCentral()
+    }
+
+    // common libs used across subprojects
+    dependencies {
+        // gRPC / Protobuf
+        compile 'io.grpc:grpc-netty-shaded:1.20.0'
+        compile 'io.grpc:grpc-protobuf:1.20.0'
+        compile 'io.grpc:grpc-stub:1.20.0'
+        compile "com.google.protobuf:protobuf-java-util:3.7.1"
+
+        // JMS (if still required)
+        compile 'org.glassfish.mq:imq:5.1'
+        compile 'com.sun.messaging.mq:fscontext:4.+'
+
+        testCompile group: 'junit', name: 'junit', version: '4.12'
+    }
+}
+
+// Configure shared subproject to generate protobuf sources into shared/src/generated
+project(':shared') {
+    apply plugin: 'java'
+    apply plugin: 'com.google.protobuf'
+
+    sourceSets {
+        main {
+            java {
+                srcDir 'src/main/java'
+                srcDir 'src/generated/main/java'
+                // grpc generated classes are Java as well (placed under src/generated/main/java)
+            }
+        }
+    }
+
+    protobuf {
+        protoc {
+            artifact = "com.google.protobuf:protoc:3.7.1"
+        }
+        plugins {
+            grpc {
+                artifact = 'io.grpc:protoc-gen-grpc-java:1.20.0'
+            }
+        }
+        generateProtoTasks {
+            all()*.plugins {
+                grpc {}
+            }
+        }
+        // generate under the shared module folder
+        generatedFilesBaseDir = "$projectDir/src/generated"
+    }
+
+    // ensure generated sources are compiled
+    compileJava.dependsOn 'generateProto'
+    dependencies {
+        compile "com.google.protobuf:protobuf-java-util:3.7.1"
+        compile 'io.grpc:grpc-protobuf:1.20.0'
+        compile 'io.grpc:grpc-stub:1.20.0'
+    }
+}
+
+// client project
+project(':client') {
+    apply plugin: 'application'
+
+    application {
+        mainClassName = 'app.Main'
+    }
+
+    jar {
+        manifest {
+            attributes('Main-Class': 'app.Main')
+        }
+    }
+
+    // generated dir used by client (kept as original behavior)
+    project.ext.defaultgenerateddir = file('src/generated/java')
+    project.ext.defaultgenerateddir.mkdirs()
+
+    sourceSets {
+        main {
+            java {
+                srcDir 'src/main/java'
+                srcDir project.ext.defaultgenerateddir
+            }
+        }
+    }
+
+    configurations {
+        wstools
+    }
+
+    dependencies {
+        compile project(':shared')
+        wstools group: 'com.sun.xml.ws', name: 'jaxws-tools', version: '2.3.2'
+    }
+
+    task wsimport(group: "WS tools", description: "execute wsimport task with a given wsdl location") {
+        doLast {
+            if (!project.hasProperty('wsdl')) {
+                throw new GradleException('No wsdl location provided, please provide a wsdl location such as: -Pwsdl="http://localhost:8080/MyService?wsdl"')
+            } else {
+                ant.taskdef(name: 'wsimport', classname: 'com.sun.tools.ws.ant.WsImport', classpath: configurations.wstools.asPath)
+                ant.wsimport(wsdl: wsdl,
+                        sourcedestdir: project.ext.defaultgenerateddir,
+                        xnocompile: true,
+                        verbose: true)
+            }
+        }
+    }
+}
+
+// server project
+project(':server') {
+    apply plugin: 'application'
+
+    application {
+        mainClassName = 'backend.TicketServerMain'
+    }
+
+    jar {
+        manifest {
+            attributes('Main-Class': 'backend.TicketServerMain')
+        }
+    }
+
+    dependencies {
+        compile project(':shared')
+    }
+}
+
+apply plugin: 'eclipse'

@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package ticketmanagement;
+
+option java_package = "rpc.ticketmanagement";
+option java_multiple_files = true;
+option java_outer_classname = "TicketManagementProto";
+
+service TicketService {
+  rpc CreateTicket(CreateTicketRequest) returns (CreateTicketResponse);
+  rpc GetTicket(GetTicketRequest) returns (GetTicketResponse);
+  rpc UpdateTicket(UpdateTicketRequest) returns (UpdateTicketResponse);
+  rpc DeleteTicket(DeleteTicketRequest) returns (DeleteTicketResponse);
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
+  rpc SearchTickets(SearchTicketsRequest) returns (ListTicketsResponse);
+}
+
+message Ticket {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  Priority priority = 4;
+  Status status = 5;
+  Type type = 6;
+  string created_at = 7; // ISO 8601 UTC
+  string updated_at = 8; // ISO 8601 UTC
+  bytes raw_data = 9;    // optional raw payload
+}
+
+enum Priority {
+  PRIORITY_UNKNOWN = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+}
+
+enum Status {
+  STATUS_UNKNOWN = 0;
+  OPEN = 1;
+  IN_PROGRESS = 2;
+  RESOLVED = 3;
+  CLOSED = 4;
+}
+
+enum Type {
+  TYPE_UNKNOWN = 0;
+  BUG = 1;
+  FEATURE = 2;
+  TASK = 3;
+}
+
+message CreateTicketRequest { Ticket ticket = 1; }
+message CreateTicketResponse { Ticket ticket = 1; }
+
+message GetTicketRequest { string id = 1; }
+message GetTicketResponse { Ticket ticket = 1; }
+
+message UpdateTicketRequest { Ticket ticket = 1; }
+message UpdateTicketResponse { Ticket ticket = 1; }
+
+message DeleteTicketRequest { string id = 1; }
+message DeleteTicketResponse { bool success = 1; }
+
+message ListTicketsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListTicketsResponse {
+  repeated Ticket tickets = 1;
+  string next_page_token = 2;
+}
+
+message SearchTicketsRequest {
+  string query = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}

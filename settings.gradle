@@ -1,0 +1,5 @@
+rootProject.name = 'Ticket-Management-System'
+
+include ':client'
+include ':server'
+include ':shared'
